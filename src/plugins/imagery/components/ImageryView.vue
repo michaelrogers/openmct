@@ -436,6 +436,7 @@ export default {
 
         this.setTimeContext = this.setTimeContext.bind(this);
         this.setTimeContext();
+        this.openmct.objectViews.on('clearData', this.clearData);
 
         // related telemetry keys
         this.spacecraftPositionKeys = ['positionX', 'positionY', 'positionZ'];
@@ -691,6 +692,74 @@ export default {
             if (thumbnailClick && !this.isPaused) {
                 this.paused(true);
             }
+        },
+        boundsChange(bounds, isTick) {
+            if (!isTick) {
+                this.requestHistory();
+            }
+        },
+        async requestHistory() {
+            let bounds = this.openmct.time.bounds();
+            this.requestCount++;
+            const requestId = this.requestCount;
+            this.imageHistory = [];
+
+            let data = await this.openmct.telemetry
+                .request(this.domainObject, bounds) || [];
+
+            if (this.requestCount === requestId) {
+                data.forEach((datum, index) => {
+                    this.updateHistory(datum, index === data.length - 1);
+                });
+            }
+        },
+        timeSystemChange(system) {
+            this.timeSystem = this.openmct.time.timeSystem();
+            this.timeKey = this.timeSystem.key;
+            this.timeFormatter = this.getFormatter(this.timeKey);
+            this.durationFormatter = this.getFormatter(this.timeSystem.durationFormat || DEFAULT_DURATION_FORMATTER);
+            this.trackDuration();
+        },
+        clearData(domainObjectToClear) {
+            // clear domainObject
+
+        },
+        clockChange(clock) {
+            this.trackDuration();
+        },
+        subscribe() {
+            this.unsubscribe = this.openmct.telemetry
+                .subscribe(this.domainObject, (datum) => {
+                    let parsedTimestamp = this.parseTime(datum);
+                    let bounds = this.openmct.time.bounds();
+
+                    if (parsedTimestamp >= bounds.start && parsedTimestamp <= bounds.end) {
+                        this.updateHistory(datum);
+                    }
+                });
+        },
+        updateHistory(datum, setFocused = true) {
+            if (this.datumIsNotValid(datum)) {
+                return;
+            }
+
+            let image = { ...datum };
+            image.formattedTime = this.formatTime(datum);
+            image.url = this.formatImageUrl(datum);
+            image.time = datum[this.timeKey];
+            image.imageDownloadName = this.getImageDownloadName(datum);
+
+            this.imageHistory.push(image);
+            if (setFocused) {
+                this.setFocusedImage(this.imageHistory.length - 1);
+                this.scrollToRight();
+            }
+        },
+        getFormatter(key) {
+            let metadataValue = this.metadata.value(key) || { format: key };
+            let valueFormatter = this.openmct.telemetry.getValueFormatter(metadataValue);
+
+            return valueFormatter;
         },
         trackDuration() {
             if (this.canTrackDuration) {
