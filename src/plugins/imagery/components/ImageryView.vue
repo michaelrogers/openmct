@@ -723,6 +723,15 @@ export default {
         clearData(domainObjectToClear) {
             // clear domainObject
 
+            if (!domainObjectToClear) {
+                return;
+            }
+
+            const idsEqual = this.openmct.objects.areIdsEqual(domainObjectToClear.identifier, this.domainObject.identifier);
+            if (!domainObjectToClear || idsEqual) {
+                // clear the imagery
+            }
+
         },
         clockChange(clock) {
             this.trackDuration();
@@ -739,6 +748,7 @@ export default {
                 });
         },
         updateHistory(datum, setFocused = true) {
+           console.log('updateHistory', datum); 
             if (this.datumIsNotValid(datum)) {
                 return;
             }
