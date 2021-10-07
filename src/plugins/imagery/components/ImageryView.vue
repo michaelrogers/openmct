@@ -486,6 +486,8 @@ export default {
             this.relatedTelemetry.destroy();
         }
 
+
+
         // unsubscribe from related telemetry
         if (this.relatedTelemetry.hasRelatedTelemetry) {
             for (let key of this.relatedTelemetry.keys) {
@@ -494,6 +496,9 @@ export default {
                 }
             }
         }
+
+        this.openmct.objectViews.off('clearData', this.clearData);
+
     },
     methods: {
         setTimeContext() {
